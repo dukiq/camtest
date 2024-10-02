@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: space-between;
+            margin: 20px;
+        }
+
+        #left-panel, #right-panel {
+            width: 48%;
+        }
+
+        #camera-section {
+            position: relative;
+            background-color: #000;
+            width: 100%;
+            height: 320px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        #permission-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        #camera-select {
+            margin-top: 20px;
+            display: none;
+        }
+
+        #test-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: none;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        #right-panel {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #ccc;
+            height: 100%;
+        }
+
+        #camera-info {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #camera-info li {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="left-panel">
+        <h2>Тест веб-камеры</h2>
+
+        <div id="camera-section">
+            <video id="webcam" autoplay playsinline></video>
+        </div>
+
+        <button id="permission-btn">Дать разрешение на камеру</button>
+        <div id="status"></div>
+
+        <select id="camera-select"></select>
+        <button id="test-btn">Тест</button>
+    </div>
+
+    <div id="right-panel">
+        <h3>Информация о камере</h3>
+        <ul id="camera-info">
+            <li>Название камеры: <span id="camera-name">—</span></li>
+            <li>Процент освещённости: <span id="brightness">—</span></li>
+            <li>Разрешение: <span id="resolution">—</span></li>
+        </ul>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const permissionBtn = document.getElementById('permission-btn');
+        const statusElement = document.getElementById('status');
+        const cameraSelect = document.getElementById('camera-select');
+        const testBtn = document.getElementById('test-btn');
+        const cameraNameElement = document.getElementById('camera-name');
+        const brightnessElement = document.getElementById('brightness');
+        const resolutionElement = document.getElementById('resolution');
+
+        let currentStream = null;
+
+        // Запрашиваем камеры пользователя
+        permissionBtn.addEventListener('click', async () => {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+                if (videoDevices.length > 0) {
+                    videoDevices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                        cameraSelect.appendChild(option);
+                    });
+                    
+                    cameraSelect.style.display = 'block';
+                    testBtn.style.display = 'block';
+                }
+
+                permissionBtn.style.display = 'none';
+                statusElement.textContent = "Камера готова к тесту.";
+            } catch (err) {
+                statusElement.textContent = "Ошибка доступа к камере.";
+            }
+        });
+
+        // Запускаем тест выбранной камеры
+        testBtn.addEventListener('click', async () => {
+            const deviceId = cameraSelect.value;
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                video: {
+                    deviceId: { exact: deviceId }
+                }
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElement.srcObject = stream;
+                videoElement.style.display = 'block';
+                currentStream = stream;
+
+                const track = stream.getVideoTracks()[0];
+                const settings = track.getSettings();
+                
+                cameraNameElement.textContent = cameraSelect.options[cameraSelect.selectedIndex].text;
+                resolutionElement.textContent = `${settings.width}x${settings.height}`;
+                
+                // Предположительный расчет "освещённости" (простой пример)
+                brightnessElement.textContent = Math.random() * 100 + '%';
+            } catch (err) {
+                statusElement.textContent = "Ошибка при тестировании камеры.";
+            }
+        });
+    </script>
+</body>
+</html>
